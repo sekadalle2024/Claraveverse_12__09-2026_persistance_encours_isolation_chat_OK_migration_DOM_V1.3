@@ -180,10 +180,13 @@
               <li>✅ Tests Sauvegarde Tables</li>
               <li>✅ Tests Restauration</li>
               <li>✅ Tests Anti-Doublons</li>
-              <li>✅ Tests Modifications Structurelles</li>
               <li>✅ Analyse Performance</li>
               <li>✅ Inspection DOM Storage</li>
               <li>✅ Statistiques Globales</li>
+              <li>🆕 Test Sauvegarde Immédiate (Problème #2)</li>
+              <li>🆕 Test Checkpoint Saver (Problème #2)</li>
+              <li>🆕 Test Logs Détaillés (Problème #2)</li>
+              <li>🆕 Vérification Code conso.js (Problème #2)</li>
             </ul>
           </div>
         </div>
@@ -236,6 +239,12 @@
       await this.test6_TestPerformance();
       await this.test7_InspecterStorage();
       await this.test8_StatistiquesGlobales();
+      
+      // 🆕 Tests Problème #2 (Sauvegarde Immédiate)
+      await this.test9_SauvegardeImmediate();
+      await this.test10_CheckpointSaver();
+      await this.test11_LogsDetailles();
+      await this.test12_VerificationCodeConso();
 
       const endTime = performance.now();
       this.results.performance.totalDuration = Math.round(endTime - startTime);
@@ -648,6 +657,317 @@
           language: navigator.language,
           timestamp: new Date().toISOString()
         };
+
+      } catch (error) {
+        test.passed = false;
+        test.details.push({ check: 'error', status: 'failed', message: error.message });
+      }
+
+      this.results.tests.push(test);
+      await this.delay(100);
+    }
+
+    /**
+     * 🆕 Test 9: Sauvegarde Immédiate (Problème #2)
+     */
+    async test9_SauvegardeImmediate() {
+      const test = {
+        id: 'test9',
+        name: '🆕 Test Sauvegarde Immédiate (Problème #2)',
+        passed: true,
+        details: []
+      };
+
+      try {
+        // Vérifier que conso.js utilise saveTableDataNow (pas saveTableData)
+        if (window.claraverseProcessor) {
+          const setupAssertionStr = window.claraverseProcessor.setupAssertionCell?.toString() || '';
+          const setupConclusionStr = window.claraverseProcessor.setupConclusionCell?.toString() || '';
+          const setupCtrStr = window.claraverseProcessor.setupCtrCell?.toString() || '';
+
+          // Vérifier Assertion
+          if (setupAssertionStr.includes('saveTableDataNow')) {
+            test.details.push({ check: 'assertion', status: 'passed', message: '✅ setupAssertionCell utilise saveTableDataNow (immédiat)' });
+          } else if (setupAssertionStr.includes('saveTableData')) {
+            test.passed = false;
+            test.details.push({ check: 'assertion', status: 'failed', message: '❌ setupAssertionCell utilise saveTableData (debounce)' });
+          } else {
+            test.details.push({ check: 'assertion', status: 'warning', message: '⚠️ setupAssertionCell non analysable' });
+          }
+
+          // Vérifier Conclusion
+          if (setupConclusionStr.includes('saveTableDataNow')) {
+            test.details.push({ check: 'conclusion', status: 'passed', message: '✅ setupConclusionCell utilise saveTableDataNow (immédiat)' });
+          } else if (setupConclusionStr.includes('saveTableData')) {
+            test.passed = false;
+            test.details.push({ check: 'conclusion', status: 'failed', message: '❌ setupConclusionCell utilise saveTableData (debounce)' });
+          } else {
+            test.details.push({ check: 'conclusion', status: 'warning', message: '⚠️ setupConclusionCell non analysable' });
+          }
+
+          // Vérifier Ctr
+          if (setupCtrStr.includes('saveTableDataNow')) {
+            test.details.push({ check: 'ctr', status: 'passed', message: '✅ setupCtrCell utilise saveTableDataNow (immédiat)' });
+          } else if (setupCtrStr.includes('saveTableData')) {
+            test.passed = false;
+            test.details.push({ check: 'ctr', status: 'failed', message: '❌ setupCtrCell utilise saveTableData (debounce)' });
+          } else {
+            test.details.push({ check: 'ctr', status: 'warning', message: '⚠️ setupCtrCell non analysable' });
+          }
+
+          // Vérifier double sécurité
+          if (setupAssertionStr.includes('domStorageManager.saveTable')) {
+            test.details.push({ check: 'doubleSecurity', status: 'passed', message: '✅ Double sécurité présente (domStorageManager direct)' });
+          } else {
+            test.details.push({ check: 'doubleSecurity', status: 'warning', message: '⚠️ Double sécurité absente' });
+          }
+
+          // Vérifier logs CRITIQUE
+          if (setupAssertionStr.includes('[CRITIQUE]')) {
+            test.details.push({ check: 'logs', status: 'passed', message: '✅ Logs [CRITIQUE] présents' });
+          } else {
+            test.details.push({ check: 'logs', status: 'warning', message: '⚠️ Logs [CRITIQUE] absents' });
+          }
+
+        } else {
+          test.passed = false;
+          test.details.push({ check: 'processor', status: 'failed', message: '❌ claraverseProcessor non chargé' });
+        }
+
+      } catch (error) {
+        test.passed = false;
+        test.details.push({ check: 'error', status: 'failed', message: error.message });
+      }
+
+      this.results.tests.push(test);
+      await this.delay(100);
+    }
+
+    /**
+     * 🆕 Test 10: Checkpoint Saver (Problème #2)
+     */
+    async test10_CheckpointSaver() {
+      const test = {
+        id: 'test10',
+        name: '🆕 Test Checkpoint Saver (Problème #2)',
+        passed: true,
+        details: []
+      };
+
+      try {
+        // Vérifier chargement checkpoint saver
+        if (window.domCheckpointSaver) {
+          test.details.push({ check: 'loaded', status: 'passed', message: '✅ DOM Checkpoint Saver chargé' });
+
+          // Vérifier méthode forceCheckpoint existe
+          if (typeof window.domCheckpointSaver.forceCheckpoint === 'function') {
+            test.details.push({ check: 'method', status: 'passed', message: '✅ Méthode forceCheckpoint() disponible' });
+
+            // Tester la fonction
+            try {
+              const savedCount = window.domCheckpointSaver.forceCheckpoint();
+              test.details.push({ check: 'execution', status: 'passed', message: `✅ Checkpoint exécuté: ${savedCount} table(s) sauvegardée(s)` });
+            } catch (err) {
+              test.passed = false;
+              test.details.push({ check: 'execution', status: 'failed', message: `❌ Erreur exécution: ${err.message}` });
+            }
+
+          } else {
+            test.passed = false;
+            test.details.push({ check: 'method', status: 'failed', message: '❌ Méthode forceCheckpoint() manquante' });
+          }
+
+          // Vérifier listeners événements
+          const checkpointStr = window.domCheckpointSaver.constructor.toString();
+          if (checkpointStr.includes('beforeunload')) {
+            test.details.push({ check: 'beforeunload', status: 'passed', message: '✅ Listener beforeunload présent' });
+          } else {
+            test.details.push({ check: 'beforeunload', status: 'warning', message: '⚠️ Listener beforeunload non détecté' });
+          }
+
+          if (checkpointStr.includes('popstate')) {
+            test.details.push({ check: 'popstate', status: 'passed', message: '✅ Listener popstate présent' });
+          } else {
+            test.details.push({ check: 'popstate', status: 'warning', message: '⚠️ Listener popstate non détecté' });
+          }
+
+        } else {
+          test.passed = false;
+          test.details.push({ check: 'loaded', status: 'failed', message: '❌ DOM Checkpoint Saver NON chargé' });
+          test.details.push({ check: 'fix', status: 'info', message: '💡 Vérifier que dom-checkpoint-saver.js est chargé dans index.html' });
+        }
+
+      } catch (error) {
+        test.passed = false;
+        test.details.push({ check: 'error', status: 'failed', message: error.message });
+      }
+
+      this.results.tests.push(test);
+      await this.delay(100);
+    }
+
+    /**
+     * 🆕 Test 11: Logs Détaillés (Problème #2)
+     */
+    async test11_LogsDetailles() {
+      const test = {
+        id: 'test11',
+        name: '🆕 Test Logs Détaillés (Problème #2)',
+        passed: true,
+        details: []
+      };
+
+      try {
+        // Créer console spy pour capturer logs
+        const originalLog = console.log;
+        const capturedLogs = [];
+
+        console.log = function(...args) {
+          capturedLogs.push(args.join(' '));
+          originalLog.apply(console, args);
+        };
+
+        // Effectuer sauvegarde test
+        if (window.domStorageManager) {
+          const testTable = document.createElement('table');
+          testTable.dataset.keyword = 'TEST_LOGS_' + Date.now();
+          testTable.innerHTML = '<tr><td>Test Logs</td></tr>';
+          
+          const sessionId = 'test_logs_' + Date.now();
+          window.domStorageManager.saveTable(sessionId, testTable.dataset.keyword, testTable);
+
+          // Restaurer console
+          console.log = originalLog;
+
+          // Vérifier logs attendus
+          const logsStr = capturedLogs.join('\n');
+
+          // Log "Tentative sauvegarde"
+          if (logsStr.includes('Tentative sauvegarde')) {
+            test.details.push({ check: 'tentative', status: 'passed', message: '✅ Log "Tentative sauvegarde" présent' });
+          } else {
+            test.details.push({ check: 'tentative', status: 'warning', message: '⚠️ Log "Tentative sauvegarde" absent' });
+          }
+
+          // Log "Sauvegarde confirmée"
+          if (logsStr.includes('Sauvegarde confirmée')) {
+            test.details.push({ check: 'confirmée', status: 'passed', message: '✅ Log "Sauvegarde confirmée" présent' });
+          } else {
+            test.details.push({ check: 'confirmée', status: 'warning', message: '⚠️ Log "Sauvegarde confirmée" absent' });
+          }
+
+          // Log "Timestamp"
+          if (logsStr.includes('Timestamp:')) {
+            test.details.push({ check: 'timestamp', status: 'passed', message: '✅ Log "Timestamp" présent' });
+          } else {
+            test.details.push({ check: 'timestamp', status: 'warning', message: '⚠️ Log "Timestamp" absent' });
+          }
+
+          // Log "Taille"
+          if (logsStr.includes('Taille:') && logsStr.includes('chars')) {
+            test.details.push({ check: 'taille', status: 'passed', message: '✅ Log "Taille" présent' });
+          } else {
+            test.details.push({ check: 'taille', status: 'warning', message: '⚠️ Log "Taille" absent' });
+          }
+
+          // Nettoyer
+          window.domStorageManager.clearSession(sessionId);
+
+          // Évaluation globale
+          const passedChecks = test.details.filter(d => d.status === 'passed').length;
+          if (passedChecks >= 3) {
+            test.details.push({ check: 'evaluation', status: 'passed', message: `✅ ${passedChecks}/4 logs détaillés présents` });
+          } else {
+            test.passed = false;
+            test.details.push({ check: 'evaluation', status: 'failed', message: `❌ Seulement ${passedChecks}/4 logs détaillés` });
+          }
+
+        } else {
+          console.log = originalLog;
+          test.passed = false;
+          test.details.push({ check: 'manager', status: 'failed', message: '❌ DOM Storage Manager non disponible' });
+        }
+
+      } catch (error) {
+        test.passed = false;
+        test.details.push({ check: 'error', status: 'failed', message: error.message });
+      }
+
+      this.results.tests.push(test);
+      await this.delay(100);
+    }
+
+    /**
+     * 🆕 Test 12: Vérification Code conso.js (Problème #2)
+     */
+    async test12_VerificationCodeConso() {
+      const test = {
+        id: 'test12',
+        name: '🆕 Vérification Code conso.js (Problème #2)',
+        passed: true,
+        details: []
+      };
+
+      try {
+        // Vérifier debounce dom-auto-save
+        if (window.domAutoSave) {
+          const saveDelay = window.domAutoSave.saveDelay;
+          
+          if (saveDelay === 1000) {
+            test.details.push({ check: 'debounce', status: 'passed', message: '✅ Debounce auto-save = 1000ms (optimal)' });
+          } else if (saveDelay === 500) {
+            test.passed = false;
+            test.details.push({ check: 'debounce', status: 'failed', message: `❌ Debounce auto-save = 500ms (insuffisant)` });
+            test.details.push({ check: 'debounce_fix', status: 'info', message: '💡 Augmenter à 1000ms dans dom-auto-save.js' });
+          } else {
+            test.details.push({ check: 'debounce', status: 'warning', message: `⚠️ Debounce auto-save = ${saveDelay}ms` });
+          }
+        } else {
+          test.passed = false;
+          test.details.push({ check: 'autoSave', status: 'failed', message: '❌ DOM Auto-Save non chargé' });
+        }
+
+        // Vérifier claraverseProcessor existe
+        if (window.claraverseProcessor) {
+          test.details.push({ check: 'processor', status: 'passed', message: '✅ claraverseProcessor chargé' });
+
+          // Vérifier méthode detectCurrentSessionId
+          if (typeof window.claraverseProcessor.detectCurrentSessionId === 'function') {
+            test.details.push({ check: 'sessionDetect', status: 'passed', message: '✅ Méthode detectCurrentSessionId() présente' });
+          } else {
+            test.details.push({ check: 'sessionDetect', status: 'warning', message: '⚠️ Méthode detectCurrentSessionId() absente' });
+          }
+
+          // Vérifier tables [Modelised_table] dans page
+          const modelisedTables = Array.from(document.querySelectorAll('table[data-keyword]'))
+            .filter(t => !t.closest('#claraverse-dom-storage'))
+            .filter(t => {
+              const headers = Array.from(t.querySelectorAll('th')).map(h => h.textContent.toLowerCase());
+              return headers.some(h => h.includes('assertion') || h.includes('conclusion') || h.includes('ctr'));
+            });
+
+          if (modelisedTables.length > 0) {
+            test.details.push({ check: 'modelisedTables', status: 'info', message: `📊 ${modelisedTables.length} table(s) [Modelised_table] détectée(s)` });
+            
+            // Vérifier listeners sur ces tables
+            modelisedTables.forEach((table, idx) => {
+              const hasListeners = table.dataset.observerInstalled === 'true';
+              if (hasListeners) {
+                test.details.push({ check: `table${idx}`, status: 'passed', message: `✅ Table ${idx + 1}: Listeners installés` });
+              } else {
+                test.details.push({ check: `table${idx}`, status: 'warning', message: `⚠️ Table ${idx + 1}: Listeners non détectés` });
+              }
+            });
+
+          } else {
+            test.details.push({ check: 'modelisedTables', status: 'info', message: '📊 Aucune table [Modelised_table] actuellement visible' });
+            test.details.push({ check: 'modelisedTables_tip', status: 'info', message: '💡 Générer une table avec GPT pour tester' });
+          }
+
+        } else {
+          test.passed = false;
+          test.details.push({ check: 'processor', status: 'failed', message: '❌ claraverseProcessor non chargé' });
+        }
 
       } catch (error) {
         test.passed = false;
